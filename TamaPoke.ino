@@ -180,6 +180,10 @@ const char *eggMsg();
 const char *statusMsg();
 
 void setup() {
+#ifdef BOARD_K10_PRO
+  delay(3000);   // DIAGNOSTICO: da tempo de abrir o monitor serial depois que a USB reaparece
+  k10_step(1);
+#endif
   Serial.setRxBufferSize(8192);  // la transferencia a SD llega en bloques de 2 KB
   Serial.begin(115200);
   // CRITICO: sin esto, Serial.print BLOQUEA el juego cuando no hay un
@@ -187,9 +191,16 @@ void setup() {
   // y nadie lo vacia) -> con timeout 0 los mensajes se descartan
   Serial.setTxTimeoutMs(0);
   Serial.printf("TamaPoke fw v%s\n", FW_VERSION);
+#ifdef BOARD_K10_PRO
+  k10_report_boot();
+  k10_step(2);
+#endif
   loadLang();  // idioma guardado (ES por defecto)
 #ifdef BOARD_K10_PRO
   k10_board_begin();   // I2C, expansor, tela (luz apagada), toque, bateria, buzzer
+#ifdef BOARD_K10_PRO
+  k10_step(3);
+#endif
 #else
   Wire.begin(IIC_SDA, IIC_SCL);
 #endif
@@ -207,8 +218,14 @@ void setup() {
   // QSPI a 80MHz (por defecto 40): el flush del framebuffer es el cuello de
   // botella del fps (~56ms a 40MHz). Si el panel mostrara basura, bajar a 40M.
   if (!gfx->begin(80000000)) Serial.println("gfx->begin() fallo");
+#ifdef BOARD_K10_PRO
+  k10_step(4);
+#endif
   panel->setBrightness(180);
   applyLangFont();  // fuente del idioma guardado (clasica salvo CJK)
+#ifdef BOARD_K10_PRO
+  k10_step(5);
+#endif
 
 #ifndef BOARD_K10_PRO   // no K10 PRO o toque (GT911) ja foi iniciado em k10_board_begin()
   touch.setPins(TP_RESET, TP_INT);
@@ -229,13 +246,31 @@ void setup() {
 #endif
 
   pet.begin();
+#ifdef BOARD_K10_PRO
+  k10_step(6);
+#endif
   sdBegin();
+#ifdef BOARD_K10_PRO
+  k10_step(7);
+#endif
   thumbs.load();
+#ifdef BOARD_K10_PRO
+  k10_step(8);
+#endif
 
   // reloj real: aplica el tiempo que estuvo apagado
   rtcBegin();
+#ifdef BOARD_K10_PRO
+  k10_step(9);
+#endif
   batBegin();
+#ifdef BOARD_K10_PRO
+  k10_step(10);
+#endif
   pwrSetup();
+#ifdef BOARD_K10_PRO
+  k10_step(11);
+#endif
   uint32_t e = rtcEpoch();
   if (e == 0) {
     // Sin pila de respaldo, el PCF85063 pierde la hora al cortar la
@@ -255,6 +290,9 @@ void setup() {
   pet.syncClock(e);
 
   audioBegin();  // ES8311 + I2S + amplificador (suena un jingle de arranque)
+#ifdef BOARD_K10_PRO
+  k10_step(12);
+#endif
 
   lastInteract = millis();
 }

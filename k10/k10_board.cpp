@@ -1,3 +1,4 @@
+#include <esp_system.h>
 #include "k10_board.h"       // primeiro: traz o Arduino_GFX antes dos drivers (que definem High/Low)
 #include <USB.h>
 #include "Display_ST7701.h"
@@ -53,6 +54,15 @@ static K10UsbWatch sUsbWatch;
 
 bool k10_usb_present() { return sUsb; }
 
+// ---------------------------------------------------------------- DIAGNOSTICO (temporario)
+// Guarda em qual passo do setup() a placa estava; sobrevive ao reset (RTC_NOINIT) e e' impresso no proximo boot.
+static RTC_NOINIT_ATTR uint32_t sStepMagic;
+static RTC_NOINIT_ATTR uint32_t sStep;
+void k10_step(uint32_t n) { sStepMagic = 0xA5A55A5A; sStep = n; }
+void k10_report_boot() {
+  Serial.printf("[DIAG] motivo do reset=%d  ultimo passo=%d\n", (int)esp_reset_reason(), sStepMagic == 0xA5A55A5A ? (int)sStep : -1);
+}
+
 // ---------------------------------------------------------------- inicio
 void k10_board_begin() {
   sI2c = xSemaphoreCreateRecursiveMutex();
@@ -66,6 +76,7 @@ void k10_board_begin() {
   LCD_Init();                  // reset + ST7701 + painel RGB + toque GT911
   pinMode(0, INPUT_PULLUP);    // botao BOOT
   fillScreen565(K10_COL_BANDS);
+  Set_Backlight(40);           // DIAGNOSTICO: acende ja para ver que o LCD inicializou (remover depois)
 }
 
 // ---------------------------------------------------------------- toque
