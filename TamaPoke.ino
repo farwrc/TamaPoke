@@ -413,7 +413,9 @@ void updateBrightness(uint32_t now) {
   if (pet.evolving() || pet.ceremony || pet.eating() || pet.showHeart()) {
     lastInteract = now;
   }
-  uint32_t idle = now - lastInteract;
+  // millis() NOVO, nao o `now` do inicio do loop: handleTouch() grava lastInteract = millis() DEPOIS de `now` ser lido;
+  // com `now - lastInteract` o resultado dava negativo (= numero gigante) e o brilho caia a 3% por uma volta (piscada ao tocar).
+  uint32_t idle = millis() - lastInteract;
   dimStage = (idle > 300000) ? 2 : (idle > 90000) ? 1 : 0;
   uint8_t target = pet.sleeping ? 25 : (usbPresent() ? 180 : 145);
   if (dimStage == 1) target = pet.sleeping ? 10 : 60;

@@ -21,4 +21,4 @@
 #define K10_BAT_CHARGING_V  4.15f      // a partir disto (V) considera carregando / no cabo (mesma regra do icone do leitor K10)
 
 // DIAGNOSTICO (temporario): 1 = o jogo le o toque mas IGNORA tudo (nenhum bipe, nenhuma reacao), so' para ver se a tela ainda pisca. 0 = jogo normal.
-#define K10_DIAG_TOUCH_IGNORE 1
+#define K10_DIAG_TOUCH_IGNORE 0
