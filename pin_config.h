@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef BOARD_K10_PRO
+#include "k10_pins.h"   // Waveshare ESP32-S3-Touch-LCD-2.8B (K10 PRO)
+#else
+
 // Pines oficiales de la Waveshare ESP32-S3-Touch-AMOLED-1.75
 // Fuente: github.com/waveshareteam/ESP32-S3-Touch-AMOLED-1.75 (libraries/Mylibrary/pin_config.h)
 
@@ -37,3 +41,5 @@
 #define SDMMC_CMD 1
 #define SDMMC_DATA 3
 #define SDMMC_CS 41
+
+#endif  // BOARD_K10_PRO

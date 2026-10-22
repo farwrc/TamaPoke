@@ -3,22 +3,38 @@
 #include <Wire.h>
 #include <time.h>
 #include <SensorPCF85063.hpp>
+#ifdef BOARD_K10_PRO
+#include "k10_board.h"          // bateria (ADC), botao BOOT e travamento do I2C do K10 PRO
+#define I2C_LOCK()   k10_i2c_lock()
+#define I2C_UNLOCK() k10_i2c_unlock()
+#else
 #include <XPowersLib.h>
+#define I2C_LOCK()
+#define I2C_UNLOCK()
+#endif
 
 static SensorPCF85063 rtc;
+#ifndef BOARD_K10_PRO
 static XPowersPMU pmu;
+#endif
 static bool rtcOk = false;
+#ifndef BOARD_K10_PRO
 static bool pmuOk = false;
+#endif
 
 bool rtcBegin() {
+  I2C_LOCK();
   rtcOk = rtc.begin(Wire, IIC_SDA, IIC_SCL);
+  I2C_UNLOCK();
   if (!rtcOk) Serial.println("PCF85063 no detectado");
   return rtcOk;
 }
 
 uint32_t rtcEpoch() {
   if (!rtcOk) return 0;
+  I2C_LOCK();
   RTC_DateTime t = rtc.getDateTime();
+  I2C_UNLOCK();
   if (t.getYear() < 2025 || t.getYear() > 2120) return 0;  // sin hora valida
   struct tm tmv = {};
   tmv.tm_year = t.getYear() - 1900;
@@ -36,10 +52,34 @@ void rtcSetEpoch(uint32_t e) {
   time_t tt = e;
   struct tm tmv;
   gmtime_r(&tt, &tmv);
+  I2C_LOCK();
   rtc.setDateTime(RTC_DateTime(tmv.tm_year + 1900, tmv.tm_mon + 1, tmv.tm_mday,
                                tmv.tm_hour, tmv.tm_min, tmv.tm_sec));
+  I2C_UNLOCK();
 }
 
+#ifdef BOARD_K10_PRO
+// ---- K10 PRO: sem PMU AXP2101. Bateria pelo ADC, "botao PWR" = botao BOOT (GPIO0). ----
+bool batBegin() { return true; }
+void pmuEnablePanel() {}          // a tela LCD nao tem o rail do OLED
+int batPercent() { return k10_bat_percent(); }
+bool batCharging() { return k10_bat_charging(); }
+int batMillivolts() { return (int)(k10_bat_volts() * 1000.0f); }
+bool usbPresent() { return k10_usb_present(); }
+
+void pwrSetup() {}                // o pino do BOOT ja e' configurado em k10_board_begin()
+// pulsacao curta = soltou o BOOT depois de apertado por menos de 1,5 s (sondar no loop)
+bool pwrShortPressed() {
+  static bool wasDown = false;
+  static uint32_t downAt = 0;
+  bool down = k10_boot_down();
+  bool hit = false;
+  if (down && !wasDown) downAt = millis();
+  if (!down && wasDown) hit = (millis() - downAt) < 1500;
+  wasDown = down;
+  return hit;
+}
+#else
 bool batBegin() {
   pmuOk = pmu.begin(Wire, AXP2101_SLAVE_ADDRESS, IIC_SDA, IIC_SCL);
   if (!pmuOk) Serial.println("AXP2101 no detectado");
@@ -95,3 +135,4 @@ bool pwrShortPressed() {
   if (hit) pmu.clearIrqStatus();
   return hit;
 }
+#endif  // BOARD_K10_PRO

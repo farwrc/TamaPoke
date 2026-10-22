@@ -142,7 +142,14 @@ const uint8_t *SdThumbs::get(int16_t dex) const {
 
 bool sdBegin() {
   SD_MMC.setPins(SDMMC_CLK, SDMMC_CMD, SDMMC_DATA);
+#ifdef BOARD_K10_PRO
+  // No K10 PRO NUNCA formata sozinho: se o cartao nao monta, o erro aparece e o cartao fica como esta
+  // (o K10 tambem e' usado como leitor de livros, e formatar apagaria os livros).
+  sdReady = SD_MMC.begin("/sdcard", true /* modo 1-bit */, false /* nao formata */);
+  if (!sdReady) Serial.println("[k10] ERRO: o cartao nao montou. Precisa estar em FAT32 (o jogo nao formata no K10)");
+#else
   sdReady = SD_MMC.begin("/sdcard", true /* modo 1-bit */, true /* formatea si no monta */);
+#endif
   if (sdReady) {
     Serial.printf("SD montada: %llu MB\n", SD_MMC.cardSize() / (1024ULL * 1024ULL));
     SD_MMC.mkdir("/mons");

@@ -18,3 +18,8 @@ test/build/
 # borrador local de la ficha de MakerWorld y modelado abandonado de la carcasa
 MAKERWORLD.md
 case/
+
+# gerado pelo PlatformIO ao converter o TamaPoke.ino
+TamaPoke.ino.cpp
+.pio/
+.vscode/

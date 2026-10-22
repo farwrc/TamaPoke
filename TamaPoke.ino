@@ -12,7 +12,11 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include "Arduino_GFX_Library.h"
+#ifdef BOARD_K10_PRO
+#include "k10_board.h"   // Waveshare ESP32-S3-Touch-LCD-2.8B (K10 PRO): tela, toque, bateria, botao BOOT
+#else
 #include "TouchDrvCSTXXX.hpp"
+#endif
 #include <U8g2lib.h>  // fuentes CJK (japones); ver applyLangFont()
 #include "pin_config.h"
 #include "species.h"
@@ -27,6 +31,10 @@
 // el instalador web). Se muestra en la pantalla de ajustes y por serie al arrancar.
 #define FW_VERSION "1.17"
 
+#ifdef BOARD_K10_PRO
+// `panel` (a tela do K10) vem de k10_board.h. O jogo continua desenhando 466x466; o canvas e' colocado em K10_VIEW_X/Y na tela 480x640.
+Arduino_Canvas *gfx = new Arduino_Canvas(LCD_WIDTH, LCD_HEIGHT, panel, K10_VIEW_X, K10_VIEW_Y);
+#else
 Arduino_DataBus *bus = new Arduino_ESP32QSPI(
   LCD_CS, LCD_SCLK, LCD_SDIO0, LCD_SDIO1, LCD_SDIO2, LCD_SDIO3);
 Arduino_CO5300 *panel = new Arduino_CO5300(
@@ -35,10 +43,13 @@ Arduino_CO5300 *panel = new Arduino_CO5300(
 Arduino_Canvas *gfx = new Arduino_Canvas(LCD_WIDTH, LCD_HEIGHT, panel);
 
 TouchDrvCST92xx touch;
+#endif
 // fuente CJK activa: de momento siempre false, la carga llegara con el
 // soporte de japones/coreano/chino (ver PR #13)
 bool gCjkFont = false;
+#ifndef BOARD_K10_PRO
 #define TOUCH_ADDR 0x5A  // CST9217
+#endif
 Pet pet;
 
 // sprite animado de la SD para la especie actual (si existe el archivo)
@@ -164,6 +175,10 @@ int16_t tX0, tY0, tXl, tYl; // gesto en curso (inicio y ultima posicion)
 uint32_t tStart = 0;
 bool holdFired = false;
 
+// declaracoes adiantadas (o Arduino IDE gera sozinho; o PlatformIO nao gera para estas duas)
+const char *eggMsg();
+const char *statusMsg();
+
 void setup() {
   Serial.setRxBufferSize(8192);  // la transferencia a SD llega en bloques de 2 KB
   Serial.begin(115200);
@@ -173,7 +188,11 @@ void setup() {
   Serial.setTxTimeoutMs(0);
   Serial.printf("TamaPoke fw v%s\n", FW_VERSION);
   loadLang();  // idioma guardado (ES por defecto)
+#ifdef BOARD_K10_PRO
+  k10_board_begin();   // I2C, expansor, tela (luz apagada), toque, bateria, buzzer
+#else
   Wire.begin(IIC_SDA, IIC_SCL);
+#endif
   // CST9217 (tactil), AXP2101 (PMU) y PCF85063 (RTC) comparten este bus I2C.
   // Red de seguridad para PMU/RTC (SensorLib NO respeta este timeout en el
   // tactil; el cuelgue del tactil dormido se resuelve gateando por INT, ver
@@ -183,7 +202,7 @@ void setup() {
   // CRITICO: encender la alimentacion del panel (BLDO1=OLED VDD 3.3V) ANTES de
   // inicializar el display. Si el PMU se reseteo (drenaje total), este rail
   // queda OFF y la pantalla se ve negra aunque el resto de la placa funcione.
-  pmuEnablePanel();
+  pmuEnablePanel();   // no K10 PRO nao faz nada (a tela LCD nao tem esse rail)
 
   // QSPI a 80MHz (por defecto 40): el flush del framebuffer es el cuello de
   // botella del fps (~56ms a 40MHz). Si el panel mostrara basura, bajar a 40M.
@@ -191,6 +210,7 @@ void setup() {
   panel->setBrightness(180);
   applyLangFont();  // fuente del idioma guardado (clasica salvo CJK)
 
+#ifndef BOARD_K10_PRO   // no K10 PRO o toque (GT911) ja foi iniciado em k10_board_begin()
   touch.setPins(TP_RESET, TP_INT);
   bool touchOk = false;
   for (int i = 0; i < 3 && !touchOk; i++) {  // a veces falla al primer intento
@@ -206,6 +226,7 @@ void setup() {
   // INT activo-bajo: salta cuando hay datos. Gatea las lecturas I2C (ver loop)
   pinMode(TP_INT, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(TP_INT), touchIsr, FALLING);
+#endif
 
   pet.begin();
   sdBegin();
@@ -285,7 +306,12 @@ void loop() {
 
   // pulsacion corta del PWR: pantalla on/off
   static uint32_t lastPwr = 0;
-  if (now - lastPwr > 250) {
+#ifdef BOARD_K10_PRO
+  const uint32_t PWR_POLL_MS = 0;     // o botao BOOT nao tem memoria como o AXP2101: sondar a cada volta do loop
+#else
+  const uint32_t PWR_POLL_MS = 250;
+#endif
+  if (now - lastPwr > PWR_POLL_MS) {
     lastPwr = now;
     if (pwrShortPressed()) {
       screenOff = !screenOff;
@@ -477,6 +503,7 @@ void handleTouch() {
   // solo tocamos el bus si el chip aviso por INT o si el dedo sigue abajo (hay
   // que detectar el levantamiento). Leer el CST9217 dormido se colgaba ~1s y
   // congelaba el loop entero; SensorLib no respeta el timeout de Wire.
+#ifndef BOARD_K10_PRO
   if (!gTouchIrq && !wasPressed) return;
   gTouchIrq = false;
   // Un ciclo de solo direccion antes de leer. Sin esto, getPoint() se colgaba
@@ -495,6 +522,11 @@ void handleTouch() {
   if (Wire.endTransmission() != 0) return;  // no responde: se reintenta en 20 ms
   int16_t x, y;
   bool pressed = touch.getPoint(&x, &y, 1) > 0;
+#else
+  // K10 PRO: o toque GT911 avisa pelo pino INT; k10_touch_get() ja devolve as coordenadas do jogo (0..465)
+  int16_t x = 0, y = 0;
+  bool pressed = k10_touch_get(&x, &y);
+#endif
 
   // saco de entrenamiento: cada toque cuenta al instante (aporrear rapido)
   if (sackOpen) {

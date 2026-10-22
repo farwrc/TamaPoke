@@ -1,5 +1,6 @@
 #include "audio.h"
 #include "pin_config.h"
+#ifndef BOARD_K10_PRO   // no K10 PRO o som vem de k10/audio_k10.cpp (buzzer)
 #include <Arduino.h>
 #include <Wire.h>
 #include <ESP_I2S.h>
@@ -189,3 +190,5 @@ void audioSetSleeping(bool sleeping) {
   gSleeping = sleeping;
   updateAmplifierPower();  // durmiendo no hay efectos: amp apagado, sin consumo
 }
+
+#endif  // BOARD_K10_PRO
