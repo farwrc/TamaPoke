@@ -1,6 +1,8 @@
 #include <esp_system.h>
 #include "k10_board.h"       // primeiro: traz o Arduino_GFX antes dos drivers (que definem High/Low)
+#if ARDUINO_USB_MODE == 0
 #include <USB.h>
+#endif
 #include "Display_ST7701.h"
 #include "BAT_Driver.h"
 
@@ -42,6 +44,7 @@ void k10_i2c_lock() { if (sI2c) xSemaphoreTakeRecursive(sI2c, portMAX_DELAY); }
 void k10_i2c_unlock() { if (sI2c) xSemaphoreGiveRecursive(sI2c); }
 
 // ---------------------------------------------------------------- USB (so' para saber se ha cabo)
+#if ARDUINO_USB_MODE == 0
 static volatile bool sUsb = false;
 static void usbEvent(void *, esp_event_base_t base, int32_t id, void *) {
   if (base != ARDUINO_USB_EVENTS) return;
@@ -52,6 +55,9 @@ static void usbEvent(void *, esp_event_base_t base, int32_t id, void *) {
 struct K10UsbWatch { K10UsbWatch() { USB.onEvent(usbEvent); } };
 static K10UsbWatch sUsbWatch;
 
+#else
+static volatile bool sUsb = false;   // DIAGNOSTICO: modo HWCDC (USB serial/JTAG), sem TinyUSB
+#endif
 bool k10_usb_present() { return sUsb; }
 
 // ---------------------------------------------------------------- DIAGNOSTICO (temporario)
@@ -72,10 +78,12 @@ void k10_blink_last() {
 void k10_report_boot() {
   int r = (int)esp_reset_reason();
   int st = sStepMagic == 0xA5A55A5A ? (int)sStep : -1;
-  Serial.printf("[DIAG] motivo do reset=%d  ultimo passo=%d\n", r, st);
+  static RTC_NOINIT_ATTR uint32_t sBoots;
+  sBoots = (sStepMagic == 0xA5A55A5A) ? sBoots + 1 : 1;
+  Serial.printf("[DIAG] partida n=%u  motivo do reset=%d  ultimo passo=%d\n", (unsigned)sBoots, r, st);
   // Se a partida anterior travou (4=panic, 5..7=watchdog), PARA aqui repetindo o aviso: sem o loop de reinicio a USB fica estavel e da' para ler.
   while (r == 4 || r == 5 || r == 6 || r == 7) {
-    Serial.printf("[DIAG] PARADO: a partida anterior TRAVOU (motivo=%d) no passo %d. Aperte RESET na placa (sem tirar o cabo) para tentar de novo.\n", r, st);
+    Serial.printf("[DIAG] PARADO t=%lums partida n=%u: a partida anterior TRAVOU (motivo=%d) no passo %d. Aperte RESET.\n", (unsigned long)millis(), (unsigned)sBoots, r, st);
     delay(1000);
   }
 }
