@@ -181,7 +181,6 @@ const char *statusMsg();
 
 void setup() {
 #ifdef BOARD_K10_PRO
-  k10_blink_last();   // DIAGNOSTICO: mostra o ultimo passo piscando a luz da tela
   k10_step(1);
 #endif
   Serial.setRxBufferSize(8192);  // la transferencia a SD llega en bloques de 2 KB

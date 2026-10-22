@@ -70,7 +70,14 @@ void k10_blink_last() {
   delay(1500);
 }
 void k10_report_boot() {
-  Serial.printf("[DIAG] motivo do reset=%d  ultimo passo=%d\n", (int)esp_reset_reason(), sStepMagic == 0xA5A55A5A ? (int)sStep : -1);
+  int r = (int)esp_reset_reason();
+  int st = sStepMagic == 0xA5A55A5A ? (int)sStep : -1;
+  Serial.printf("[DIAG] motivo do reset=%d  ultimo passo=%d\n", r, st);
+  // Se a partida anterior travou (4=panic, 5..7=watchdog), PARA aqui repetindo o aviso: sem o loop de reinicio a USB fica estavel e da' para ler.
+  while (r == 4 || r == 5 || r == 6 || r == 7) {
+    Serial.printf("[DIAG] PARADO: a partida anterior TRAVOU (motivo=%d) no passo %d. Aperte RESET na placa (sem tirar o cabo) para tentar de novo.\n", r, st);
+    delay(1000);
+  }
 }
 
 // ---------------------------------------------------------------- inicio
