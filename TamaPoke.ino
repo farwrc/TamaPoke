@@ -570,6 +570,10 @@ void handleTouch() {
   // K10 PRO: o toque GT911 avisa pelo pino INT; k10_touch_get() ja devolve as coordenadas do jogo (0..465)
   int16_t x = 0, y = 0;
   bool pressed = k10_touch_get(&x, &y);
+#if K10_DIAG_TOUCH_IGNORE
+  (void)pressed;
+  return;   // DIAGNOSTICO: o toque e' lido (I2C), mas o jogo nao reage a nada
+#endif
 #endif
 
   // saco de entrenamiento: cada toque cuenta al instante (aporrear rapido)
