@@ -900,8 +900,7 @@ void drawScene(uint8_t biome, uint32_t now, bool night) {
 
 // primera partida: elige inicial entre Bulbasaur / Charmander / Squirtle
 void renderStarterSelect() {
-  gfx->fillScreen(RGB565_BLACK);
-  gfx->fillCircle(CX, CY, 231, UI_BG_DAY);
+  gfx->fillScreen(UI_BG_DAY);   // K10: tela quadrada, o fundo cobre tudo (o original pintava um circulo de raio 231 sobre preto)
   const char *t = T(S_CHOOSE_STARTER);
   gfx->setTextColor(UI_INK);
   setSize(2);
@@ -1569,8 +1568,7 @@ void drawClockBtn(int x, int y, const char *l) {
 static const char *const LANG_CODES[LANG_COUNT] = { "ES", "EN", "FR", "DE", "IT", "PT", "JA", "KO" };
 
 void renderClock() {
-  gfx->fillScreen(RGB565_BLACK);
-  gfx->fillCircle(CX, CY, 231, UI_BG_DAY);
+  gfx->fillScreen(UI_BG_DAY);   // K10: tela quadrada, o fundo cobre tudo (o original pintava um circulo de raio 231 sobre preto)
   gfx->setTextColor(UI_INK);
   setSize(3);
   setCur(centerX(T(S_SET_TIME), 3), 44);
@@ -1881,8 +1879,7 @@ void renderCardProgress() {
 }
 
 void renderCard() {
-  gfx->fillScreen(RGB565_BLACK);
-  gfx->fillCircle(CX, CY, 231, UI_BG_DAY);
+  gfx->fillScreen(UI_BG_DAY);   // K10: tela quadrada, o fundo cobre tudo (o original pintava um circulo de raio 231 sobre preto)
   if (cardPage == 0) renderCardProfile();
   else if (cardPage == 1) renderCardStats();
   else if (cardPage == 2) renderCardMedals();
@@ -1917,8 +1914,7 @@ void openKeyboard() {
 }
 
 void renderKeyboard() {
-  gfx->fillScreen(RGB565_BLACK);
-  gfx->fillCircle(CX, CY, 231, UI_BG_DAY);
+  gfx->fillScreen(UI_BG_DAY);   // K10: tela quadrada, o fundo cobre tudo (o original pintava um circulo de raio 231 sobre preto)
   gfx->setTextColor(UI_INK);
   setSize(2);
   setCur(centerX(T(S_NAME), 2), 56);
@@ -1994,8 +1990,7 @@ void drawThumb(const uint8_t *b, int x, int y, int s, bool sil) {
 
 void renderGallery() {
   if (galleryDetail) {  // vista detalle: se redibuja siempre (animada)
-    gfx->fillScreen(RGB565_BLACK);
-    gfx->fillCircle(CX, CY, 231, UI_BG_DAY);
+    gfx->fillScreen(UI_BG_DAY);   // K10: fundo quadrado (ver renderStarterSelect)
     const DexEntry &d = DEX_TBL[galleryDetail];
     bool reg = pet.isRegistered(galleryDetail);
     char head[32];
@@ -2027,8 +2022,7 @@ void renderGallery() {
   if (!galleryDirty) return;  // la rejilla es estatica
   galleryDirty = false;
 
-  gfx->fillScreen(RGB565_BLACK);
-  gfx->fillCircle(CX, CY, 231, UI_BG_DAY);
+  gfx->fillScreen(UI_BG_DAY);   // K10: tela quadrada, o fundo cobre tudo (o original pintava um circulo de raio 231 sobre preto)
   char head[24];
   snprintf(head, sizeof(head), T(S_POKEDEX_FMT), pet.registeredCount());
   gfx->setTextColor(UI_INK);
