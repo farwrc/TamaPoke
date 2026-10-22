@@ -3,7 +3,7 @@
 #ifdef BOARD_K10_PRO
 #include "audio.h"
 #include "k10_board.h"
-#include <Preferences.h>
+#include "k10_prefs.h"   // dados no SD, nunca na NVS (ver k10_prefs.h)
 
 struct Note { uint16_t f, ms; };   // f = frequencia original (so' diz "toca" ou "pausa" aqui), ms = duracao
 
