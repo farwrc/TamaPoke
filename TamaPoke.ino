@@ -181,7 +181,7 @@ const char *statusMsg();
 
 void setup() {
 #ifdef BOARD_K10_PRO
-  delay(3000);   // DIAGNOSTICO: da tempo de abrir o monitor serial depois que a USB reaparece
+  delay(5000);   // DIAGNOSTICO: da tempo de abrir o monitor serial depois que a USB reaparece
   k10_step(1);
 #endif
   Serial.setRxBufferSize(8192);  // la transferencia a SD llega en bloques de 2 KB

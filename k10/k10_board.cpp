@@ -66,17 +66,17 @@ void k10_report_boot() {
 // ---------------------------------------------------------------- inicio
 void k10_board_begin() {
   sI2c = xSemaphoreCreateRecursiveMutex();
-  I2C_Init();
-  TCA9554PWR_Init(0x00);
-  Set_EXIO(EXIO_PIN8, Low);    // buzzer em silencio
+  k10_step(30); I2C_Init();
+  k10_step(31); TCA9554PWR_Init(0x00);
+  k10_step(32); Set_EXIO(EXIO_PIN8, Low);    // buzzer em silencio
   Set_EXIO(EXIO_PIN4, High);   // D3/CS do cartao SD precisa estar em nivel alto para o SD_MMC montar
   vTaskDelay(pdMS_TO_TICKS(10));
-  BAT_Init();
-  Backlight_Init();            // luz de fundo APAGADA (LCD_Backlight = 0); o jogo acende depois
-  LCD_Init();                  // reset + ST7701 + painel RGB + toque GT911
-  pinMode(0, INPUT_PULLUP);    // botao BOOT
+  k10_step(33); BAT_Init();
+  k10_step(34); Backlight_Init();            // luz de fundo APAGADA (LCD_Backlight = 0); o jogo acende depois
+  k10_step(35); LCD_Init();                  // reset + ST7701 + painel RGB + toque GT911
+  k10_step(36); pinMode(0, INPUT_PULLUP);    // botao BOOT
   fillScreen565(K10_COL_BANDS);
-  Set_Backlight(40);           // DIAGNOSTICO: acende ja para ver que o LCD inicializou (remover depois)
+  k10_step(37); Set_Backlight(40);           // DIAGNOSTICO: acende ja para ver que o LCD inicializou (remover depois)
 }
 
 // ---------------------------------------------------------------- toque
