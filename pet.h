@@ -1,6 +1,10 @@
 #pragma once
 #include <Arduino.h>
+#ifdef BOARD_K10_PRO
+#include "k10_prefs.h"   // K10: dados no SD (a NVS na flash derruba o painel RGB, ver k10_prefs.h)
+#else
 #include <Preferences.h>
+#endif
 
 // 1 tick = 1 minuto de juego. Baja este valor para probar mas rapido
 // (p. ej. 5000UL = las estadisticas caen 12x mas rapido).

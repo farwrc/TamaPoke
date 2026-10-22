@@ -1,4 +1,5 @@
 #include <esp_system.h>
+#include <esp_core_dump.h>
 #include "k10_board.h"       // primeiro: traz o Arduino_GFX antes dos drivers (que definem High/Low)
 #if ARDUINO_USB_MODE == 0
 #include <USB.h>
@@ -82,7 +83,22 @@ void k10_report_boot() {
   sBoots = (sStepMagic == 0xA5A55A5A) ? sBoots + 1 : 1;
   Serial.printf("[DIAG] partida n=%u  motivo do reset=%d  ultimo passo=%d\n", (unsigned)sBoots, r, st);
   // Se a partida anterior travou (4=panic, 5..7=watchdog), PARA aqui repetindo o aviso: sem o loop de reinicio a USB fica estavel e da' para ler.
+  static esp_core_dump_summary_t sum;
+  bool haveDump = false;
+  if (r == 4 || r == 5 || r == 6 || r == 7) {
+    esp_err_t ck = esp_core_dump_image_check();
+    haveDump = (ck == ESP_OK) && esp_core_dump_get_summary(&sum) == ESP_OK;
+    Serial.printf("[DIAG] coredump: check=%d resumo=%d\n", (int)ck, (int)haveDump);
+  }
   while (r == 4 || r == 5 || r == 6 || r == 7) {
+    if (haveDump) {
+      char why[200] = "?";
+      esp_core_dump_get_panic_reason(why, sizeof(why));
+      Serial.printf("[DIAG] CRASH tarefa=%s pc=0x%08x causa=%u vaddr=0x%08x motivo='%s'\n", sum.exc_task, (unsigned)sum.exc_pc, (unsigned)sum.ex_info.exc_cause, (unsigned)sum.ex_info.exc_vaddr, why);
+      Serial.printf("[DIAG] Backtrace:");
+      for (uint32_t i = 0; i < sum.exc_bt_info.depth && i < 16; i++) Serial.printf(" 0x%08x", (unsigned)sum.exc_bt_info.bt[i]);
+      Serial.printf("\n[DIAG] elf_sha=%s\n", (const char *)sum.app_elf_sha256);
+    }
     Serial.printf("[DIAG] PARADO t=%lums partida n=%u: a partida anterior TRAVOU (motivo=%d) no passo %d. Aperte RESET.\n", (unsigned long)millis(), (unsigned)sBoots, r, st);
     delay(1000);
   }

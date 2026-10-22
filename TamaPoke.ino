@@ -14,6 +14,7 @@
 #include "Arduino_GFX_Library.h"
 #ifdef BOARD_K10_PRO
 #include "k10_board.h"   // Waveshare ESP32-S3-Touch-LCD-2.8B (K10 PRO): tela, toque, bateria, botao BOOT
+#include "k10_prefs.h"
 #else
 #include "TouchDrvCSTXXX.hpp"
 #endif
@@ -194,15 +195,16 @@ void setup() {
   k10_report_boot();
   k10_step(2);
 #endif
-  loadLang();  // idioma guardado (ES por defecto)
 #ifdef BOARD_K10_PRO
   k10_board_begin();   // I2C, expansor, tela (luz apagada), toque, bateria, buzzer
-#ifdef BOARD_K10_PRO
   k10_step(3);
-#endif
+  // K10: o SD monta ANTES de ler o idioma e o bichinho, porque os dados salvos ficam no SD (k10_prefs.h).
+  sdBegin();
+  k10_step(4);
 #else
   Wire.begin(IIC_SDA, IIC_SCL);
 #endif
+  loadLang();  // idioma guardado (ES por defecto)
   // CST9217 (tactil), AXP2101 (PMU) y PCF85063 (RTC) comparten este bus I2C.
   // Red de seguridad para PMU/RTC (SensorLib NO respeta este timeout en el
   // tactil; el cuelgue del tactil dormido se resuelve gateando por INT, ver
@@ -248,7 +250,9 @@ void setup() {
 #ifdef BOARD_K10_PRO
   k10_step(6);
 #endif
+#ifndef BOARD_K10_PRO
   sdBegin();
+#endif
 #ifdef BOARD_K10_PRO
   k10_step(7);
 #endif
@@ -317,6 +321,9 @@ void ensureMon() {
 }
 
 void loop() {
+#ifdef BOARD_K10_PRO
+  k10_prefs_tick();   // grava no SD o que mudou no bichinho/config
+#endif
   uint32_t now = millis();
   pet.update(now);
 

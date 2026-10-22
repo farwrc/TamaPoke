@@ -1,6 +1,10 @@
 #include "i18n.h"
 #include "pet.h"        // MED_COUNT
+#ifdef BOARD_K10_PRO
+#include "k10_prefs.h"   // K10: dados no SD (a NVS na flash derruba o painel RGB, ver k10_prefs.h)
+#else
 #include <Preferences.h>
+#endif
 
 Lang gLang = LANG_DEFAULT;
 

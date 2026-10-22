@@ -4,7 +4,11 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <ESP_I2S.h>
+#ifdef BOARD_K10_PRO
+#include "k10_prefs.h"   // K10: dados no SD (a NVS na flash derruba o painel RGB, ver k10_prefs.h)
+#else
 #include <Preferences.h>
+#endif
 
 // ---------------------------------------------------------------------------
 // Audio del TamaPoke: códec ES8311 (DAC -> amplificador PA -> altavoz) por I2S.
