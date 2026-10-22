@@ -59,6 +59,16 @@ bool k10_usb_present() { return sUsb; }
 static RTC_NOINIT_ATTR uint32_t sStepMagic;
 static RTC_NOINIT_ATTR uint32_t sStep;
 void k10_step(uint32_t n) { sStepMagic = 0xA5A55A5A; sStep = n; }
+// Pisca a luz da tela (GPIO6) mostrando o ultimo passo, sem depender da USB: dezenas = piscadas LONGAS, unidades = piscadas CURTAS.
+void k10_blink_last() {
+  pinMode(6, OUTPUT);
+  digitalWrite(6, HIGH); delay(1500); digitalWrite(6, LOW); delay(1000);   // inicio: 1 acendida bem longa
+  if (sStepMagic != 0xA5A55A5A) { delay(1000); return; }                  // sem registro: so' a acendida longa
+  for (uint32_t i = 0; i < sStep / 10; i++) { digitalWrite(6, HIGH); delay(600); digitalWrite(6, LOW); delay(400); }
+  delay(500);
+  for (uint32_t i = 0; i < sStep % 10; i++) { digitalWrite(6, HIGH); delay(200); digitalWrite(6, LOW); delay(300); }
+  delay(1500);
+}
 void k10_report_boot() {
   Serial.printf("[DIAG] motivo do reset=%d  ultimo passo=%d\n", (int)esp_reset_reason(), sStepMagic == 0xA5A55A5A ? (int)sStep : -1);
 }

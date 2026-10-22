@@ -40,6 +40,7 @@ bool k10_bat_charging();
 bool k10_usb_present();
 void k10_step(uint32_t n);      // DIAGNOSTICO temporario
 void k10_report_boot();
+void k10_blink_last();
 
 // O barramento I2C e' usado pelo jogo (laco principal) e pela tarefa do buzzer: este travamento evita os dois falarem ao mesmo tempo.
 void k10_i2c_lock();
