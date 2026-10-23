@@ -18,7 +18,6 @@
 
 // ---- Bateria (leitura pelo ADC; a tabela de % e' uma aproximacao de bateria de litio) ----
 #define K10_BAT_ABSENT_V    2.5f       // abaixo disto (V) considera que nao ha bateria ligada
-#define K10_BAT_CHARGING_V  4.15f      // a partir disto (V) considera carregando / no cabo (mesma regra do icone do leitor K10)
 
 // Botoes de baixo (comer, jogar, luz, banho): centro de cada um em pixels do jogo (area 466x466). Editar aqui para ajustar.
 #define K10_BTN_Y    404            // todos na mesma linha (reta)

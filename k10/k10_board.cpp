@@ -148,9 +148,10 @@ int k10_bat_percent() {
   return 100;
 }
 
+// Com o cabo USB ligado a leitura do ADC da bateria nao vale (o mesmo vale no leitor K10, que mostra o icone de "no cabo"
+// quando o evento USB esta ativo). Entao "carregando" = cabo USB presente, nao a tensao.
 bool k10_bat_charging() {
-  float v = BAT_Get_Volts();
-  return v >= K10_BAT_ABSENT_V && v >= K10_BAT_CHARGING_V;
+  return sUsb && k10_bat_volts() >= K10_BAT_ABSENT_V;
 }
 
 // ---------------------------------------------------------------- buzzer
