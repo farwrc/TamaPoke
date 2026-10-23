@@ -2106,13 +2106,13 @@ void galleryTap(int16_t x, int16_t y) {
 }
 
 // desenha o icone de bateria em `g` (canto de cima/esquerda em x,y)
-void drawBatteryOn(Arduino_GFX *g, int x, int y) {
+void drawBatteryOn(Arduino_GFX *g, int x, int y, uint16_t inkCol) {
   int pc = batPercent();
   if (pc < 0) return;  // sin bateria conectada
   int w = 24, h = 11;
   bool charging = batCharging();
   uint16_t col = charging ? UI_BAR_OK
-                 : (pc >= 40) ? inkColor()
+                 : (pc >= 40) ? inkCol
                  : (pc >= 15) ? UI_BAR_WARN
                               : UI_BAR_BAD;
   g->drawRoundRect(x, y, w, h, 2, col);
@@ -2133,7 +2133,7 @@ void drawBattery() {
 #ifdef BOARD_K10_PRO
   return;   // K10: a bateria fica na faixa de cima da tela (k10Bands, posicao em k10_config.h)
 #else
-  drawBatteryOn(gfx, CX - 14, 12);
+  drawBatteryOn(gfx, CX - 14, 12, inkColor());
 #endif
 }
 
@@ -2148,8 +2148,11 @@ static void k10Bands(const uint16_t *fb) {
   static int lastPc;
   static bool lastChg;
   uint16_t sb[K10_VIEW_X];
+  // Nos menus (inicial, relogio, ficha, teclado, Pokedex) as faixas ficam pretas como no original; so' o cenario as estende.
+  bool menu = pet.awaitingStarter() || clockOpen || cardOpen || galleryOpen || kbOpen;
   for (int y = 0; y < LCD_HEIGHT; y++) {
-    uint16_t l = fb[y * LCD_WIDTH], r = fb[y * LCD_WIDTH + LCD_WIDTH - 1];
+    uint16_t l = menu ? K10_COL_BANDS : fb[y * LCD_WIDTH];
+    uint16_t r = menu ? K10_COL_BANDS : fb[y * LCD_WIDTH + LCD_WIDTH - 1];
     if (first || l != sideL[y]) {
       for (int i = 0; i < K10_VIEW_X; i++) sb[i] = l;
       panel->draw16bitRGBBitmap(0, K10_VIEW_Y + y, sb, K10_VIEW_X, 1);
@@ -2161,8 +2164,9 @@ static void k10Bands(const uint16_t *fb) {
       sideR[y] = r;
     }
   }
-  uint16_t top = fb[0], bot = fb[(LCD_HEIGHT - 1) * LCD_WIDTH];
-  uint16_t ink = inkColor();
+  uint16_t top = menu ? K10_COL_BANDS : fb[0];
+  uint16_t bot = menu ? K10_COL_BANDS : fb[(LCD_HEIGHT - 1) * LCD_WIDTH];
+  uint16_t ink = menu ? (uint16_t)UI_WHITE : inkColor();   // bateria clara sobre a faixa preta dos menus
   int pc = batPercent();
   bool chg = batCharging();
   if (first || bot != lastBot) {
@@ -2172,7 +2176,7 @@ static void k10Bands(const uint16_t *fb) {
   }
   if (first || top != lastTop || ink != lastInk || pc != lastPc || chg != lastChg) {
     bandCv->fillScreen(top);
-    drawBatteryOn(bandCv, K10_BAT_X, K10_BAT_Y);
+    drawBatteryOn(bandCv, K10_BAT_X, K10_BAT_Y, ink);
     panel->draw16bitRGBBitmap(0, 0, bandCv->getFramebuffer(), K10_SCREEN_W, K10_VIEW_Y);
     lastTop = top; lastInk = ink; lastPc = pc; lastChg = chg;
   }
