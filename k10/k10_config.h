@@ -36,3 +36,10 @@
 
 // Orientacao da tela: 1 = como veio do leitor, 0 = girada 180 graus (a imagem e o toque giram juntos).
 #define K10_FLIP 0
+
+// Cabecalho do cenario na faixa de cima (coordenadas da TELA 480x640): canto de cima/esquerda do texto.
+#define K10_HDR_NAME_Y   14        // nome do bichinho (texto grande, centralizado na tela)
+#define K10_HDR_MSG_Y    50        // mensagem/nivel (texto menor, centralizada)
+// Chama + numero da racha (a esquerda, no nivel da bateria): canto de cima/esquerda da chama.
+#define K10_STREAK_X     12
+#define K10_STREAK_Y     11

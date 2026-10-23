@@ -38,6 +38,11 @@ Arduino_Canvas *gfx = new Arduino_Canvas(LCD_WIDTH, LCD_HEIGHT, panel, K10_VIEW_
 #ifdef BOARD_K10_PRO
 static Arduino_Canvas *bandCv = nullptr;       // faixas em volta do jogo (ver k10Bands)
 static void k10Bands(const uint16_t *fb);
+// o que o cenario pediu para desenhar na faixa de cima neste frame (nome + mensagem + chama da racha); k10Bands consome e zera
+static char gBandName[48], gBandMsg[96];
+static uint16_t gBandNameCol = 0;
+static bool gBandHdr = false;
+static uint16_t gBandStreak = 0;
 #endif
 #else
 Arduino_DataBus *bus = new Arduino_ESP32QSPI(
@@ -1679,6 +1684,10 @@ void clockTap(int16_t x, int16_t y) {
 // llama + numero de racha arriba a la izquierda
 void drawStreakBadge() {
   if (pet.streak < 1) return;
+#ifdef BOARD_K10_PRO
+  gBandStreak = pet.streak;   // K10: a chama fica na faixa de cima, no nivel da bateria (k10Bands)
+  return;
+#endif
   int x = 26, y = 16;
   gfx->fillTriangle(x + 8, y, x + 1, y + 17, x + 15, y + 17, UI_BAR_BAD);
   gfx->fillTriangle(x + 8, y + 7, x + 4, y + 17, x + 12, y + 17, UI_BAR_WARN);
@@ -2174,18 +2183,61 @@ static void k10Bands(const uint16_t *fb) {
     panel->draw16bitRGBBitmap(0, K10_VIEW_Y + LCD_HEIGHT, bandCv->getFramebuffer(), K10_SCREEN_W, K10_SCREEN_H - K10_VIEW_Y - LCD_HEIGHT);
     lastBot = bot;
   }
-  if (first || top != lastTop || ink != lastInk || pc != lastPc || chg != lastChg) {
+  static char lastName[48], lastMsg[96];
+  static uint16_t lastNameCol, lastStreak;
+  static bool lastHdr;
+  bool hdrSame = gBandHdr == lastHdr && gBandNameCol == lastNameCol && gBandStreak == lastStreak &&
+                 (!gBandHdr || (!strcmp(gBandName, lastName) && !strcmp(gBandMsg, lastMsg)));
+  if (first || top != lastTop || ink != lastInk || pc != lastPc || chg != lastChg || !hdrSame) {
+    Arduino_Canvas *saved = gfx;
+    gfx = bandCv;                 // os helpers de texto (setSize/setCur/printT/textW) usam o `gfx` global
+    applyLangFont();              // fonte do idioma tambem no buffer da faixa
     bandCv->fillScreen(top);
     drawBatteryOn(bandCv, K10_BAT_X, K10_BAT_Y, ink);
+    if (gBandHdr) {
+      gfx->setTextColor(gBandNameCol);
+      setSize(3);
+      setCur(K10_SCREEN_W / 2 - textW(gBandName, 3) / 2, K10_HDR_NAME_Y);
+      printT(gBandName);
+      gfx->setTextColor(ink);
+      setSize(2);
+      setCur(K10_SCREEN_W / 2 - textW(gBandMsg, 2) / 2, K10_HDR_MSG_Y);
+      printT(gBandMsg);
+    }
+    if (gBandStreak) {
+      int x = K10_STREAK_X, y = K10_STREAK_Y;
+      bandCv->fillTriangle(x + 8, y, x + 1, y + 17, x + 15, y + 17, UI_BAR_BAD);
+      bandCv->fillTriangle(x + 8, y + 7, x + 4, y + 17, x + 12, y + 17, UI_BAR_WARN);
+      char sn[6];
+      snprintf(sn, sizeof(sn), "%u", gBandStreak);
+      gfx->setTextColor(ink);
+      setSize(2);
+      setCur(x + 22, y + 2);
+      printT(sn);
+    }
+    gfx = saved;
     panel->draw16bitRGBBitmap(0, 0, bandCv->getFramebuffer(), K10_SCREEN_W, K10_VIEW_Y);
     lastTop = top; lastInk = ink; lastPc = pc; lastChg = chg;
+    lastHdr = gBandHdr; lastNameCol = gBandNameCol; lastStreak = gBandStreak;
+    snprintf(lastName, sizeof(lastName), "%s", gBandName);
+    snprintf(lastMsg, sizeof(lastMsg), "%s", gBandMsg);
   }
+  gBandHdr = false;     // o proximo frame pede de novo (se nao pedir, a faixa fica sem o cabecalho)
+  gBandStreak = 0;
   first = false;
 }
 #endif
 
 void drawHeader(const char *name, uint16_t nameColor, const char *msg) {
   drawBattery();
+#ifdef BOARD_K10_PRO
+  // K10: nome e mensagem sobem para a faixa de cima (k10Bands desenha)
+  snprintf(gBandName, sizeof(gBandName), "%s", name);
+  snprintf(gBandMsg, sizeof(gBandMsg), "%s", msg);
+  gBandNameCol = nameColor;
+  gBandHdr = true;
+  return;
+#endif
   gfx->setTextColor(nameColor);
   setSize(3);
   setCur(centerX(name, 3), 52);
