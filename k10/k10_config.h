@@ -33,3 +33,6 @@
 // Tamanho da area do jogo (o canvas do TamaPoke).
 #define K10_GAME_W 466
 #define K10_GAME_H 466
+
+// Orientacao da tela: 1 = como veio do leitor, 0 = girada 180 graus (a imagem e o toque giram juntos).
+#define K10_FLIP 0

@@ -8,8 +8,9 @@
 #define GT911_ADDR          0x5D
 #define GT911_INT_PIN       16
      
-#define Mirror_X       1
-#define Mirror_Y       1
+#include "k10_config.h"
+#define Mirror_X       K10_FLIP
+#define Mirror_Y       K10_FLIP
 
 #define Touch_WIDTH     ESP_PANEL_LCD_WIDTH
 #define Touch_HEIGHT    ESP_PANEL_LCD_HEIGHT

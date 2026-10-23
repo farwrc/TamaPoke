@@ -1,4 +1,5 @@
-#include "Display_ST7701.h"  
+#include "Display_ST7701.h"
+#include "k10_config.h"  
       
 spi_device_handle_t SPI_handle = NULL;     
 esp_lcd_panel_handle_t panel_handle = NULL;    
@@ -193,7 +194,7 @@ bool example_on_vsync_event(esp_lcd_panel_handle_t panel, const esp_lcd_rgb_pane
 void LCD_Init() {
   ST7701_Reset();
   ST7701_Init();
-  esp_lcd_panel_mirror(panel_handle, true, true);
+  esp_lcd_panel_mirror(panel_handle, K10_FLIP, K10_FLIP);
   Touch_Init();
 }
 
@@ -257,7 +258,7 @@ static void LCD_rgb_create() {
   esp_lcd_new_rgb_panel(&rgb_config, &panel_handle);
   esp_lcd_panel_reset(panel_handle);
   esp_lcd_panel_init(panel_handle);
-  esp_lcd_panel_mirror(panel_handle, true, true);
+  esp_lcd_panel_mirror(panel_handle, K10_FLIP, K10_FLIP);
 }
 
 void LCD_rgb_on() {
