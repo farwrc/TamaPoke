@@ -128,12 +128,21 @@ struct Btn {
   int16_t cx, cy;
   const char *const *icon;
 };
+#ifdef BOARD_K10_PRO
+Btn buttons[4] = {   // K10: linha reta, posicoes em k10_config.h
+  { K10_BTN1_X, K10_BTN_Y, SPR_ICON_FOOD },   // comer
+  { K10_BTN2_X, K10_BTN_Y, SPR_ICON_PLAY },   // jugar
+  { K10_BTN3_X, K10_BTN_Y, SPR_ICON_LIGHT },  // luz
+  { K10_BTN4_X, K10_BTN_Y, SPR_ICON_CLEAN },  // bano
+};
+#else
 Btn buttons[4] = {
   { 140, 390, SPR_ICON_FOOD },   // comer
   { 202, 404, SPR_ICON_PLAY },   // jugar
   { 264, 404, SPR_ICON_LIGHT },  // luz
   { 326, 390, SPR_ICON_CLEAN },  // bano
 };
+#endif
 #define BTN_HALF 26  // boton de 52x52
 #define BTN_HIT 36   // radio tactil (un poco mas generoso)
 
@@ -572,10 +581,6 @@ void handleTouch() {
   // K10 PRO: o toque GT911 avisa pelo pino INT; k10_touch_get() ja devolve as coordenadas do jogo (0..465)
   int16_t x = 0, y = 0;
   bool pressed = k10_touch_get(&x, &y);
-#if K10_DIAG_TOUCH_IGNORE
-  (void)pressed;
-  return;   // DIAGNOSTICO: o toque e' lido (I2C), mas o jogo nao reage a nada
-#endif
 #endif
 
   // saco de entrenamiento: cada toque cuenta al instante (aporrear rapido)

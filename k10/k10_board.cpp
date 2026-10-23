@@ -1,5 +1,4 @@
 #include <esp_system.h>
-#include <esp_core_dump.h>
 #include "k10_board.h"       // primeiro: traz o Arduino_GFX antes dos drivers (que definem High/Low)
 #if ARDUINO_USB_MODE == 0
 #include <USB.h>
@@ -61,47 +60,15 @@ static volatile bool sUsb = false;   // DIAGNOSTICO: modo HWCDC (USB serial/JTAG
 #endif
 bool k10_usb_present() { return sUsb; }
 
-// ---------------------------------------------------------------- DIAGNOSTICO (temporario)
+// ---------------------------------------------------------------- passo do setup() (para saber onde travou)
 // Guarda em qual passo do setup() a placa estava; sobrevive ao reset (RTC_NOINIT) e e' impresso no proximo boot.
 static RTC_NOINIT_ATTR uint32_t sStepMagic;
 static RTC_NOINIT_ATTR uint32_t sStep;
 void k10_step(uint32_t n) { sStepMagic = 0xA5A55A5A; sStep = n; }
-// Pisca a luz da tela (GPIO6) mostrando o ultimo passo, sem depender da USB: dezenas = piscadas LONGAS, unidades = piscadas CURTAS.
-void k10_blink_last() {
-  pinMode(6, OUTPUT);
-  digitalWrite(6, HIGH); delay(1500); digitalWrite(6, LOW); delay(1000);   // inicio: 1 acendida bem longa
-  if (sStepMagic != 0xA5A55A5A) { delay(1000); return; }                  // sem registro: so' a acendida longa
-  for (uint32_t i = 0; i < sStep / 10; i++) { digitalWrite(6, HIGH); delay(600); digitalWrite(6, LOW); delay(400); }
-  delay(500);
-  for (uint32_t i = 0; i < sStep % 10; i++) { digitalWrite(6, HIGH); delay(200); digitalWrite(6, LOW); delay(300); }
-  delay(1500);
-}
 void k10_report_boot() {
   int r = (int)esp_reset_reason();
   int st = sStepMagic == 0xA5A55A5A ? (int)sStep : -1;
-  static RTC_NOINIT_ATTR uint32_t sBoots;
-  sBoots = (sStepMagic == 0xA5A55A5A) ? sBoots + 1 : 1;
-  Serial.printf("[DIAG] partida n=%u  motivo do reset=%d  ultimo passo=%d\n", (unsigned)sBoots, r, st);
-  // Se a partida anterior travou (4=panic, 5..7=watchdog), PARA aqui repetindo o aviso: sem o loop de reinicio a USB fica estavel e da' para ler.
-  static esp_core_dump_summary_t sum;
-  bool haveDump = false;
-  if (r == 4 || r == 5 || r == 6 || r == 7) {
-    esp_err_t ck = esp_core_dump_image_check();
-    haveDump = (ck == ESP_OK) && esp_core_dump_get_summary(&sum) == ESP_OK;
-    Serial.printf("[DIAG] coredump: check=%d resumo=%d\n", (int)ck, (int)haveDump);
-  }
-  while (r == 4 || r == 5 || r == 6 || r == 7) {
-    if (haveDump) {
-      char why[200] = "?";
-      esp_core_dump_get_panic_reason(why, sizeof(why));
-      Serial.printf("[DIAG] CRASH tarefa=%s pc=0x%08x causa=%u vaddr=0x%08x motivo='%s'\n", sum.exc_task, (unsigned)sum.exc_pc, (unsigned)sum.ex_info.exc_cause, (unsigned)sum.ex_info.exc_vaddr, why);
-      Serial.printf("[DIAG] Backtrace:");
-      for (uint32_t i = 0; i < sum.exc_bt_info.depth && i < 16; i++) Serial.printf(" 0x%08x", (unsigned)sum.exc_bt_info.bt[i]);
-      Serial.printf("\n[DIAG] elf_sha=%s\n", (const char *)sum.app_elf_sha256);
-    }
-    Serial.printf("[DIAG] PARADO t=%lums partida n=%u: a partida anterior TRAVOU (motivo=%d) no passo %d. Aperte RESET.\n", (unsigned long)millis(), (unsigned)sBoots, r, st);
-    delay(1000);
-  }
+  Serial.printf("[boot] motivo do reset=%d  ultimo passo do setup=%d\n", r, st);
 }
 
 // ---------------------------------------------------------------- inicio
@@ -117,7 +84,7 @@ void k10_board_begin() {
   k10_step(35); LCD_Init();                  // reset + ST7701 + painel RGB + toque GT911
   k10_step(36); pinMode(0, INPUT_PULLUP);    // botao BOOT
   fillScreen565(K10_COL_BANDS);
-  k10_step(37); Set_Backlight(40);           // DIAGNOSTICO: acende ja para ver que o LCD inicializou (remover depois)
+  k10_step(37);
 }
 
 // ---------------------------------------------------------------- toque

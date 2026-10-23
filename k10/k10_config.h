@@ -20,5 +20,9 @@
 #define K10_BAT_ABSENT_V    2.5f       // abaixo disto (V) considera que nao ha bateria ligada
 #define K10_BAT_CHARGING_V  4.15f      // a partir disto (V) considera carregando / no cabo (mesma regra do icone do leitor K10)
 
-// DIAGNOSTICO (temporario): 1 = o jogo le o toque mas IGNORA tudo (nenhum bipe, nenhuma reacao), so' para ver se a tela ainda pisca. 0 = jogo normal.
-#define K10_DIAG_TOUCH_IGNORE 0
+// Botoes de baixo (comer, jogar, luz, banho): centro de cada um em pixels do jogo (area 466x466). Editar aqui para ajustar.
+#define K10_BTN_Y    404            // todos na mesma linha (reta)
+#define K10_BTN1_X   140
+#define K10_BTN2_X   202
+#define K10_BTN3_X   264
+#define K10_BTN4_X   326
