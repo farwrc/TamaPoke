@@ -17,8 +17,12 @@ bool Arduino_K10Panel::begin(int32_t) {
   return true;
 }
 
+void (*k10_after_frame)(const uint16_t *fb) = nullptr;
+
 void Arduino_K10Panel::draw16bitRGBBitmap(int16_t x, int16_t y, uint16_t *bitmap, int16_t w, int16_t h) {
   LCD_addWindow(x, y, x + w - 1, y + h - 1, (uint8_t *)bitmap);
+  // so' o frame inteiro do jogo dispara o gancho (as faixas tambem passam por aqui, mas com outro tamanho)
+  if (k10_after_frame && x == K10_VIEW_X && y == K10_VIEW_Y && w == K10_GAME_W && h == K10_GAME_H) k10_after_frame(bitmap);
 }
 
 #define K10_NOT_USED(nome) Serial.println("[k10] ERRO: " nome " nao e' usado pelo jogo e nao foi implementado para a tela do K10")

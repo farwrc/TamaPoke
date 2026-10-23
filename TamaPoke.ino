@@ -35,6 +35,10 @@
 #ifdef BOARD_K10_PRO
 // `panel` (a tela do K10) vem de k10_board.h. O jogo continua desenhando 466x466; o canvas e' colocado em K10_VIEW_X/Y na tela 480x640.
 Arduino_Canvas *gfx = new Arduino_Canvas(LCD_WIDTH, LCD_HEIGHT, panel, K10_VIEW_X, K10_VIEW_Y);
+#ifdef BOARD_K10_PRO
+static Arduino_Canvas *bandCv = nullptr;       // faixas em volta do jogo (ver k10Bands)
+static void k10Bands(const uint16_t *fb);
+#endif
 #else
 Arduino_DataBus *bus = new Arduino_ESP32QSPI(
   LCD_CS, LCD_SCLK, LCD_SDIO0, LCD_SDIO1, LCD_SDIO2, LCD_SDIO3);
@@ -228,6 +232,12 @@ void setup() {
   // QSPI a 80MHz (por defecto 40): el flush del framebuffer es el cuello de
   // botella del fps (~56ms a 40MHz). Si el panel mostrara basura, bajar a 40M.
   if (!gfx->begin(80000000)) Serial.println("gfx->begin() fallo");
+#ifdef BOARD_K10_PRO
+  // buffer das faixas em volta do jogo (480 x 87); sem saida propria, so' guarda os pixels
+  bandCv = new Arduino_Canvas(K10_SCREEN_W, K10_VIEW_Y, nullptr);
+  if (!bandCv->begin(GFX_SKIP_OUTPUT_BEGIN)) Serial.println("[k10] ERRO: faltou memoria para as faixas");
+  k10_after_frame = k10Bands;
+#endif
 #ifdef BOARD_K10_PRO
   k10_step(4);
 #endif
@@ -2095,28 +2105,80 @@ void galleryTap(int16_t x, int16_t y) {
   galleryPmd.load(dex, pet.isShinyRegistered(dex));
 }
 
-void drawBattery() {
+// desenha o icone de bateria em `g` (canto de cima/esquerda em x,y)
+void drawBatteryOn(Arduino_GFX *g, int x, int y) {
   int pc = batPercent();
   if (pc < 0) return;  // sin bateria conectada
-  int x = CX - 14, y = 12, w = 24, h = 11;
+  int w = 24, h = 11;
   bool charging = batCharging();
   uint16_t col = charging ? UI_BAR_OK
                  : (pc >= 40) ? inkColor()
                  : (pc >= 15) ? UI_BAR_WARN
                               : UI_BAR_BAD;
-  gfx->drawRoundRect(x, y, w, h, 2, col);
-  gfx->fillRect(x + w, y + 3, 3, 5, col);  // borne
+  g->drawRoundRect(x, y, w, h, 2, col);
+  g->fillRect(x + w, y + 3, 3, 5, col);  // borne
   if (charging) {
     // rayo de carga (zigzag) en vez de la barra de nivel
     uint16_t bolt = C565(0xff, 0xd9, 0x4a);
     int bx = x + w / 2;
-    gfx->fillTriangle(bx + 3, y + 1, bx - 4, y + 6, bx + 1, y + 6, bolt);
-    gfx->fillTriangle(bx - 1, y + 5, bx + 4, y + 5, bx - 3, y + 10, bolt);
+    g->fillTriangle(bx + 3, y + 1, bx - 4, y + 6, bx + 1, y + 6, bolt);
+    g->fillTriangle(bx - 1, y + 5, bx + 4, y + 5, bx - 3, y + 10, bolt);
   } else {
     int fw = (w - 4) * pc / 100;
-    if (fw > 0) gfx->fillRect(x + 2, y + 2, fw, h - 4, col);
+    if (fw > 0) g->fillRect(x + 2, y + 2, fw, h - 4, col);
   }
 }
+
+void drawBattery() {
+#ifdef BOARD_K10_PRO
+  return;   // K10: a bateria fica na faixa de cima da tela (k10Bands, posicao em k10_config.h)
+#else
+  drawBatteryOn(gfx, CX - 14, 12);
+#endif
+}
+
+#ifdef BOARD_K10_PRO
+// K10: a tela fisica (480x640) e' maior que a area do jogo (466x466). As faixas em volta continuam o cenario:
+// em cima a cor da linha de cima, embaixo a da linha de baixo, nos lados a cor da borda de cada linha. A bateria
+// fica na faixa de cima. Roda depois de cada frame enviado (gancho em k10_board.cpp); so' redesenha o que mudou.
+static void k10Bands(const uint16_t *fb) {
+  static bool first = true;
+  static uint16_t sideL[LCD_HEIGHT], sideR[LCD_HEIGHT];
+  static uint16_t lastTop, lastBot, lastInk;
+  static int lastPc;
+  static bool lastChg;
+  uint16_t sb[K10_VIEW_X];
+  for (int y = 0; y < LCD_HEIGHT; y++) {
+    uint16_t l = fb[y * LCD_WIDTH], r = fb[y * LCD_WIDTH + LCD_WIDTH - 1];
+    if (first || l != sideL[y]) {
+      for (int i = 0; i < K10_VIEW_X; i++) sb[i] = l;
+      panel->draw16bitRGBBitmap(0, K10_VIEW_Y + y, sb, K10_VIEW_X, 1);
+      sideL[y] = l;
+    }
+    if (first || r != sideR[y]) {
+      for (int i = 0; i < K10_VIEW_X; i++) sb[i] = r;
+      panel->draw16bitRGBBitmap(K10_VIEW_X + LCD_WIDTH, K10_VIEW_Y + y, sb, K10_VIEW_X, 1);
+      sideR[y] = r;
+    }
+  }
+  uint16_t top = fb[0], bot = fb[(LCD_HEIGHT - 1) * LCD_WIDTH];
+  uint16_t ink = inkColor();
+  int pc = batPercent();
+  bool chg = batCharging();
+  if (first || bot != lastBot) {
+    bandCv->fillScreen(bot);
+    panel->draw16bitRGBBitmap(0, K10_VIEW_Y + LCD_HEIGHT, bandCv->getFramebuffer(), K10_SCREEN_W, K10_SCREEN_H - K10_VIEW_Y - LCD_HEIGHT);
+    lastBot = bot;
+  }
+  if (first || top != lastTop || ink != lastInk || pc != lastPc || chg != lastChg) {
+    bandCv->fillScreen(top);
+    drawBatteryOn(bandCv, K10_BAT_X, K10_BAT_Y);
+    panel->draw16bitRGBBitmap(0, 0, bandCv->getFramebuffer(), K10_SCREEN_W, K10_VIEW_Y);
+    lastTop = top; lastInk = ink; lastPc = pc; lastChg = chg;
+  }
+  first = false;
+}
+#endif
 
 void drawHeader(const char *name, uint16_t nameColor, const char *msg) {
   drawBattery();

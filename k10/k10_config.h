@@ -26,3 +26,11 @@
 #define K10_BTN2_X   202
 #define K10_BTN3_X   264
 #define K10_BTN4_X   326
+
+// Bateria na faixa de cima da tela fisica (480x640): canto de cima/esquerda do icone (24 x 11), em pixels da TELA.
+#define K10_BAT_X    441
+#define K10_BAT_Y    14
+
+// Tamanho da area do jogo (o canvas do TamaPoke).
+#define K10_GAME_W 466
+#define K10_GAME_H 466
