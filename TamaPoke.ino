@@ -596,6 +596,8 @@ void handleTouch() {
   // K10 PRO: o toque GT911 avisa pelo pino INT; k10_touch_get() ja devolve as coordenadas do jogo (0..465)
   int16_t x = 0, y = 0;
   bool pressed = k10_touch_get(&x, &y);
+  // K10: com a tela apagada o toque NAO acorda; so' o botao BOOT (o toque ainda e' lido, so' descartado)
+  if (screenOff) { wasPressed = false; return; }
 #endif
 
   // saco de entrenamiento: cada toque cuenta al instante (aporrear rapido)
