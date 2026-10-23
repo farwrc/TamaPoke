@@ -93,7 +93,7 @@ void k10_board_begin() {
 
 // ---------------------------------------------------------------- toque
 bool k10_touch_get(int16_t *x, int16_t *y) {
-  static bool down = false, ignoring = false;
+  static bool down = false;
   static int16_t lx = 0, ly = 0;
   static uint32_t lastHit = 0;
 
@@ -106,21 +106,17 @@ bool k10_touch_get(int16_t *x, int16_t *y) {
     k10_i2c_unlock();
     bool got = Touch_Get_XY(px, py, st, &n, 1) && n > 0;
     if (got) {
-      int fx = (int)px[0] - K10_VIEW_X, fy = (int)py[0] - K10_VIEW_Y;
-      bool inside = fx >= 0 && fx < LCD_WIDTH && fy >= 0 && fy < LCD_HEIGHT;
-      if (!down && !inside) ignoring = true;                 // o toque comecou numa faixa: ignora ate' levantar
-      if (!ignoring) {
-        lx = (int16_t)constrain(fx, 0, LCD_WIDTH - 1);       // arrastando para fora da area, prende na borda
-        ly = (int16_t)constrain(fy, 0, LCD_HEIGHT - 1);
-        down = true;
-      }
+      // as faixas em volta do jogo agora tem o cenario: um toque nelas conta, preso na borda da area do jogo
+      // (assim da' para comecar um deslizar de cima/baixo/lado ja' na faixa)
+      lx = (int16_t)constrain((int)px[0] - K10_VIEW_X, 0, LCD_WIDTH - 1);
+      ly = (int16_t)constrain((int)py[0] - K10_VIEW_Y, 0, LCD_HEIGHT - 1);
+      down = true;
       lastHit = millis();
     } else {                                                 // aviso do toque sem pontos = dedo levantado
       down = false;
-      ignoring = false;
     }
   }
-  if ((down || ignoring) && millis() - lastHit > K10_TOUCH_RELEASE_MS) { down = false; ignoring = false; }
+  if (down && millis() - lastHit > K10_TOUCH_RELEASE_MS) down = false;
   if (down) { *x = lx; *y = ly; }
   return down;
 }
